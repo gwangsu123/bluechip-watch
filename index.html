@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="블루칩워치">
+<meta name="theme-color" content="#0f0f0f">
+<title>블루칩 워치</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg:   #0f0f0f;
+  --bg2:  #1a1a1a;
+  --bg3:  #242424;
+  --line: rgba(255,255,255,0.07);
+  --t1:   #f0f0f0;
+  --t2:   #888;
+  --t3:   #444;
+  --up:   #ff4040;
+  --dn:   #3d87f5;
+  --gold: #e8b400;
+  --top:  env(safe-area-inset-top,44px);
+  --bot:  env(safe-area-inset-bottom,16px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:-apple-system,'SF Pro Text',sans-serif;overflow:hidden;overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100%}
+
+/* ── Header ─────────────────────── */
+#hd{flex-shrink:0;background:var(--bg);padding:calc(var(--top) + 10px) 16px 0;border-bottom:0.5px solid var(--line)}
+.hd-row{display:flex;align-items:center;margin-bottom:10px}
+.logo{font-size:18px;font-weight:700;letter-spacing:-.5px;flex:1}
+.logo em{color:var(--gold);font-style:normal}
+.icon-btn{width:34px;height:34px;border:none;background:var(--bg3);border-radius:50%;color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#searchbox{height:0;overflow:hidden;transition:height .2s ease}
+#searchbox.open{height:44px}
+#searchbox input{width:100%;height:38px;background:var(--bg3);border:0.5px solid var(--line);border-radius:10px;padding:0 14px;color:var(--t1);font-size:15px;outline:none;margin-bottom:6px}
+#searchbox input::placeholder{color:var(--t3)}
+
+/* ── Sector tabs ─────────────────── */
+#tabs{flex-shrink:0;display:flex;gap:6px;overflow-x:auto;padding:10px 16px;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.stab{flex-shrink:0;font-size:12px;padding:5px 13px;border-radius:99px;border:0.5px solid rgba(255,255,255,.15);color:var(--t2);background:transparent;cursor:pointer;white-space:nowrap;transition:all .15s}
+.stab.on{background:var(--t1);color:#000;border-color:var(--t1);font-weight:600}
+
+/* ── Stock list ──────────────────── */
+#list{flex:1;overflow-y:auto;padding:0 10px 8px;-webkit-overflow-scrolling:touch}
+.sec-hd{display:flex;justify-content:space-between;font-size:11px;color:var(--t3);padding:10px 6px 4px;letter-spacing:.3px}
+.row{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;margin-bottom:2px;background:var(--bg2);cursor:pointer;transition:background .1s}
+.row:active{background:var(--bg3)}
+.rk{font-size:11px;color:var(--t3);width:24px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm s{font-size:11px;color:var(--t3);font-style:normal}
+.pct{font-size:13px;font-weight:600;width:58px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.dn{color:var(--dn)}.nt{color:var(--t2)}
+.star{font-size:19px;width:28px;text-align:center;flex-shrink:0;color:var(--t3);transition:all .15s}
+.star.on{color:var(--gold)}
+.empty{text-align:center;padding:60px 20px;color:var(--t3);font-size:14px;line-height:1.8}
+
+/* ── Bottom nav ──────────────────── */
+#nav{flex-shrink:0;background:var(--bg);border-top:0.5px solid var(--line);padding-bottom:var(--bot);display:flex}
+.ntab{flex:1;border:none;background:none;padding:10px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--t3)}
+.ntab.on{color:var(--gold)}
+.ntab i{font-size:23px;line-height:1}
+.ntab span{font-size:10px;letter-spacing:.2px}
+.badge{display:inline-block;background:var(--up);color:#fff;font-size:10px;font-weight:700;border-radius:99px;padding:0 5px;min-width:16px;text-align:center;margin-left:3px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="hd">
+    <div class="hd-row">
+      <div class="logo">블루칩 <em>워치</em></div>
+      <button class="icon-btn" id="srchbtn" onclick="toggleSearch()">🔍</button>
+    </div>
+    <div id="searchbox">
+      <input id="srch" type="search" placeholder="종목명 또는 코드 검색…"
+             oninput="onSearch(this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+  </div>
+
+  <div id="tabs"></div>
+  <div id="list"></div>
+
+  <div id="nav">
+    <button class="ntab on" id="n-all" onclick="setView('all')">
+      <i>📊</i><span>전체</span>
+    </button>
+    <button class="ntab" id="n-fav" onclick="setView('fav')">
+      <i>⭐</i><span>즐겨찾기</span>
+    </button>
+  </div>
+
+</div>
+
+<script>
+const SEC=[
+  {id:'all',  lb:'전체'},
+  {id:'semi', lb:'반도체·전자'},
+  {id:'elec', lb:'전력기기'},
+  {id:'auto', lb:'자동차'},
+  {id:'fin',  lb:'금융'},
+  {id:'def',  lb:'방산'},
+  {id:'ship', lb:'조선·해운'},
+  {id:'bat',  lb:'2차전지·화학'},
+  {id:'steel',lb:'철강·소재'},
+  {id:'bio',  lb:'바이오·제약'},
+  {id:'it',   lb:'IT·플랫폼'},
+  {id:'const',lb:'건설·상사'},
+  {id:'tel',  lb:'통신'},
+  {id:'etc',  lb:'소비·지주·기타'},
+];
+
+// [rank, ticker, name, chg%, sectorId, subsector]
+const ST=[
+  [1,'005930','삼성전자',3.87,'semi','반도체'],
+  [2,'000660','SK하이닉스',-0.51,'semi','반도체'],
+  [4,'402340','SK스퀘어',-0.67,'semi','반도체 지주'],
+  [7,'009150','삼성전기',-0.19,'semi','전자부품'],
+  [26,'042700','한미반도체',-1.75,'semi','반도체장비'],
+  [28,'066570','LG전자',15.73,'semi','가전·전자'],
+  [52,'011070','LG이노텍',2.92,'semi','전자부품'],
+  [62,'018260','삼성에스디에스',4.13,'semi','IT서비스'],
+  [84,'007660','이수페타시스',-0.75,'semi','PCB (전자장비 ≠반도체)'],
+  [91,'064400','LG씨엔에스',16.60,'semi','IT서비스'],
+  [8,'034020','두산에너빌리티',-1.58,'elec','발전설비'],
+  [18,'267260','HD현대일렉트릭',0.39,'elec','전기장비'],
+  [20,'010120','LS ELECTRIC',1.05,'elec','전기장비'],
+  [24,'298040','효성중공업',-1.19,'elec','전기장비'],
+  [37,'015760','한국전력',-2.82,'elec','전력공기업'],
+  [67,'001440','대한전선',4.59,'elec','전선'],
+  [88,'062040','산일전기',-1.65,'elec','변압기'],
+  [93,'009830','한화솔루션',10.08,'elec','태양광·화학'],
+  [5,'005380','현대차',2.54,'auto','완성차'],
+  [11,'000270','기아',0.11,'auto','완성차'],
+  [15,'012330','현대모비스',3.39,'auto','부품'],
+  [39,'064350','현대로템',-2.09,'auto','방산·철도차량'],
+  [47,'086280','현대글로비스',-3.87,'auto','물류'],
+  [50,'307950','현대오토에버',-0.72,'auto','IT서비스'],
+  [14,'032830','삼성생명',3.10,'fin','보험'],
+  [16,'105560','KB금융',0.20,'fin','은행지주'],
+  [19,'055550','신한지주',-1.05,'fin','은행지주'],
+  [22,'006800','미래에셋증권',-0.14,'fin','증권'],
+  [29,'086790','하나금융지주',-0.57,'fin','은행지주'],
+  [38,'000810','삼성화재',4.82,'fin','보험'],
+  [40,'316140','우리금융지주',-0.96,'fin','은행지주'],
+  [55,'138040','메리츠금융지주',0.00,'fin','금융지주'],
+  [58,'024110','기업은행',0.24,'fin','국책은행'],
+  [63,'071050','한국금융지주',2.78,'fin','증권지주'],
+  [71,'005940','NH투자증권',-0.52,'fin','증권'],
+  [72,'016360','삼성증권',0.16,'fin','증권'],
+  [73,'039490','키움증권',2.07,'fin','증권'],
+  [74,'005830','DB손해보험',3.54,'fin','보험'],
+  [75,'323410','카카오뱅크',1.81,'fin','인터넷은행'],
+  [12,'012450','한화에어로스페이스',0.47,'def','방산·엔진'],
+  [45,'272210','한화시스템',1.09,'def','방산·레이더'],
+  [49,'079550','LIG디펜스앤에어로스페이스',-0.34,'def','방산'],
+  [60,'047810','한국항공우주',-1.71,'def','항공기'],
+  [9,'329180','HD현대중공업',-6.96,'ship','조선'],
+  [27,'042660','한화오션',-1.32,'ship','조선'],
+  [32,'009540','HD한국조선해양',-4.02,'ship','조선지주'],
+  [35,'010140','삼성중공업',-2.58,'ship','조선'],
+  [53,'011200','HMM',-2.27,'ship','해운'],
+  [81,'443060','HD현대마린솔루션',-3.02,'ship','해양서비스'],
+  [6,'373220','LG에너지솔루션',2.67,'bat','배터리'],
+  [17,'006400','삼성SDI',0.95,'bat','배터리'],
+  [33,'051910','LG화학',-1.16,'bat','화학·소재'],
+  [41,'003670','포스코퓨처엠',-0.40,'bat','양극재'],
+  [44,'096770','SK이노베이션',-3.47,'bat','에너지·배터리'],
+  [25,'005490','POSCO홀딩스',0.94,'steel','철강지주'],
+  [31,'010130','고려아연',1.53,'steel','비철금속'],
+  [66,'047050','포스코인터내셔널',1.52,'steel','철강·상사'],
+  [13,'207940','삼성바이오로직스',-0.71,'bio','CMO'],
+  [21,'068270','셀트리온',0.63,'bio','바이오시밀러'],
+  [68,'0126Z0','삼성에피스홀딩스',0.79,'bio','바이오시밀러'],
+  [97,'326030','SK바이오팜',0.35,'bio','뇌전증치료제'],
+  [30,'035420','NAVER',4.47,'it','포털·클라우드'],
+  [48,'035720','카카오',2.79,'it','플랫폼'],
+  [65,'259960','크래프톤',1.96,'it','게임'],
+  [82,'352820','하이브',1.52,'it','엔터'],
+  [10,'028260','삼성물산',1.75,'const','건설·상사'],
+  [51,'000720','현대건설',2.55,'const','건설'],
+  [70,'047040','대우건설',3.63,'const','건설'],
+  [78,'028050','삼성E&A',0.75,'const','플랜트'],
+  [43,'017670','SK텔레콤',-3.50,'tel','통신'],
+  [61,'030200','KT',-2.02,'tel','통신'],
+  [23,'034730','SK',-2.91,'etc','지주'],
+  [34,'000150','두산',-1.84,'etc','지주'],
+  [42,'267250','HD현대',-5.61,'etc','조선지주'],
+  [46,'033780','KT&G',1.71,'etc','담배·제약'],
+  [54,'003550','LG',8.10,'etc','지주'],
+  [57,'006260','LS',3.87,'etc','지주'],
+  [59,'278470','에이피알',5.35,'etc','뷰티·D2C'],
+  [69,'010950','S-Oil',-4.42,'etc','정유'],
+  [77,'003230','삼양식품',8.42,'etc','식품'],
+  [83,'000880','한화',0.85,'etc','지주'],
+  [85,'003490','대한항공',0.97,'etc','항공'],
+  [98,'034220','LG디스플레이',9.39,'etc','디스플레이'],
+  [99,'180640','한진칼',2.05,'etc','항공지주'],
+];
+
+let favs = JSON.parse(localStorage.getItem('bc_favs')||'[]');
+let sec = 'all';
+let view = 'all';
+let q = '';
+let searchOpen = false;
+
+const save = () => localStorage.setItem('bc_favs', JSON.stringify(favs));
+
+function toggleFav(tk,e){
+  e.stopPropagation();
+  const i=favs.indexOf(tk);
+  i===-1 ? favs.push(tk) : favs.splice(i,1);
+  save(); render();
+}
+
+function toggleSearch(){
+  searchOpen=!searchOpen;
+  const b=document.getElementById('searchbox');
+  b.classList.toggle('open',searchOpen);
+  if(searchOpen) document.getElementById('srch').focus();
+  else { q=''; document.getElementById('srch').value=''; render(); }
+}
+
+function onSearch(v){ q=v.trim().toLowerCase(); render(); }
+
+function setSec(id){ sec=id; renderTabs(); renderList(); }
+
+function setView(v){
+  view=v;
+  document.getElementById('n-all').className='ntab'+(v==='all'?' on':'');
+  document.getElementById('n-fav').className='ntab'+(v==='fav'?' on':'');
+  document.getElementById('tabs').style.display=v==='fav'?'none':'flex';
+  renderList();
+}
+
+function filtered(){
+  let s=ST;
+  if(view==='fav') s=s.filter(x=>favs.includes(x[1]));
+  if(sec!=='all') s=s.filter(x=>x[4]===sec);
+  if(q) s=s.filter(x=>x[2].toLowerCase().includes(q)||x[1].includes(q));
+  return s.sort((a,b)=>a[0]-b[0]);
+}
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML=SEC.map(s=>
+    `<button class="stab${s.id===sec?' on':''}" onclick="setSec('${s.id}')">${s.lb}</button>`
+  ).join('');
+}
+
+function renderList(){
+  const el=document.getElementById('list');
+  const data=filtered();
+  if(!data.length){
+    el.innerHTML=`<div class="empty">${view==='fav'?'⭐️<br>즐겨찾기 종목을<br>별표로 추가하세요':'🔍<br>검색 결과가 없어요'}</div>`;
+    return;
+  }
+  if(sec==='all'&&view==='all'&&!q){
+    let h='';
+    SEC.slice(1).forEach(s=>{
+      const ss=data.filter(x=>x[4]===s.id);
+      if(!ss.length) return;
+      h+=`<div class="sec-hd"><span>${s.lb}</span><span>${ss.length}종목</span></div>`;
+      h+=ss.map(row).join('');
+    });
+    el.innerHTML=h;
+  } else {
+    el.innerHTML=data.map(row).join('');
+  }
+  // update fav badge
+  const fc=favs.length;
+  document.getElementById('n-fav').innerHTML=
+    `<i>⭐</i><span>즐겨찾기${fc?`<span class="badge">${fc}</span>`:''}</span>`;
+}
+
+function row([rk,tk,nm,chg,sid,sub]){
+  const isFav=favs.includes(tk);
+  const s=chg>0?'+':'';
+  const c=chg>0?'up':chg<0?'dn':'nt';
+  return `<div class="row">
+    <span class="rk">${rk}</span>
+    <span class="nm"><b>${nm}</b><s>${tk} · ${sub}</s></span>
+    <span class="pct ${c}">${s}${chg.toFixed(2)}%</span>
+    <span class="star${isFav?' on':''}" onclick="toggleFav('${tk}',event)">${isFav?'★':'☆'}</span>
+  </div>`;
+}
+
+function render(){ renderTabs(); renderList(); }
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// Init
+render();
+</script>
+</body>
+</html>
